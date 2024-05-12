@@ -1,0 +1,4 @@
+.venv
+.vscode
+source.zip
+update_serverless_function.sh
