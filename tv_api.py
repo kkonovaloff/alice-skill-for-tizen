@@ -1,4 +1,6 @@
+import json
 import os
+
 import requests
 
 DEVICE_ID = os.environ.get("DEVICE_ID", "")
@@ -15,7 +17,48 @@ API_BASEURL = "https://api.smartthings.com/v1"
 API_DEVICES = API_BASEURL + "/devices/"
 API_DEVICE = API_DEVICES + DEVICE_ID
 API_COMMANDS = API_DEVICE + "/commands/"
+API_STATUS = API_DEVICE + "/status/"
+
 REQUEST_HEADERS = {"Authorization": "Bearer " + TV_AUTH_TOKEN}
+
+"""
+Returns TV's On/Off status
+"""
+def get_switch_status() -> bool:
+    with requests.get(API_STATUS, headers=REQUEST_HEADERS) as result:
+        if result.status_code != 200:
+            print(
+                f"[get_switch_status] Error: status code: {result.status_code}\n{result.content}")
+            return False
+        response = result.content
+    try:
+        response = json.loads(response)
+        switch = response["components"]["main"]["switch"]["switch"]["value"]
+        return switch == "on"
+    except Exception as e:
+        print(f"[get_switch_status] Error while parsing response: {e}")
+        return False
+
+
+def update_switch_status(status: bool) -> bool:
+    SWITCH_COMMAND = f"""
+    {{
+        "commands": [
+            {{
+                "component": "main",
+                "capability": "switch",
+                "command": "{"on" if status else "off"}"
+            }}
+        ]
+    }}
+    """
+    with requests.post(API_COMMANDS, data=SWITCH_COMMAND, headers=REQUEST_HEADERS) as result:
+        if result.status_code == 200:
+            return True
+        print(
+            f"[update_switch_status] Error: status code: {result.status_code}\n{result.content}")
+        return False
+
 
 def launch_app(app_id: int) -> bool:
     LAUNCH_APP_COMMAND = f"""
