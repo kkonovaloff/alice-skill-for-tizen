@@ -12,6 +12,18 @@ GET_TV_STATUS_KEYWORDS = (
     "включен",
 )
 
+SET_VOLUME_KEYWORDS = (
+    "громкость",
+)
+
+SET_VOLUME_UP_KEYWORDS = (
+    "громче",
+)
+
+SET_VOLUME_DOWN_KEYWORDS = (
+    "тише",
+)
+
 
 def handler(event, context) -> dict:
     welcome_text = 'Привет! Я могу включать приложения на телевизоре. Например: скажите "включить ютуб" или "включить кинопоиск".'
@@ -27,6 +39,12 @@ def handler(event, context) -> dict:
 
     if any((keyword in tokens for keyword in LAUNCH_APP_KEYWORDS)):
         return handle_launch_app(event, request_text)
+
+    if any((keyword in tokens for keyword in SET_VOLUME_KEYWORDS)):
+        return handle_set_volume(event)
+
+    if any((keyword in tokens for keyword in SET_VOLUME_UP_KEYWORDS + SET_VOLUME_DOWN_KEYWORDS)):
+        return handle_set_volume_up_down(event, tokens)
 
     if any((keyword in tokens for keyword in GET_TV_STATUS_KEYWORDS)):
         return handle_tv_status(event)
@@ -47,9 +65,35 @@ def handle_launch_app(event, request_text: str) -> dict:
     return response_with_text(event, "Не могу найти приложение по вашему запросу.")
 
 
+def handle_set_volume(event) -> dict:
+    entities = event['request']['nlu']['entities']
+    volume = None
+    for entity in entities:
+        if entity['type'] == "YANDEX.NUMBER":
+            # Weird convertion because API accepts only integers
+            volume = int(float(entity['value']))
+            break
+    if volume is None:
+        return response_with_text(event, "Не расслышала уровень громкости. Например, скажите: громкость 10.")
+
+    if tv_api.set_volume(volume):
+        return response_with_text(event, "Готово")
+    return response_with_text(event, "Произошла ошибка. Попробуйте еще раз.")
+
+
+def handle_set_volume_up_down(event, tokens: list[str]) -> dict:
+    volume_up = False
+    if any(keyword in tokens for keyword in SET_VOLUME_UP_KEYWORDS):
+        volume_up = True
+
+    if tv_api.volume_up_down(volume_up):
+        return response_with_text(event, "Готово")
+    return response_with_text(event, "Произошла ошибка. Попробуйте еще раз.")
+
+
 def handle_tv_status(event) -> dict:
     tv_status = tv_api.get_switch_status()
-    return response_with_text(event, f"Статус телевизора: {"включен" if tv_status else "выключен"}.")
+    return response_with_text(event, f"Телевизор {"включен" if tv_status else "выключен"}.")
 
 
 def response_with_text(event, text: str, end_session: bool = False) -> dict:

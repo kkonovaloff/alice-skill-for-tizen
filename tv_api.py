@@ -82,3 +82,46 @@ def launch_app(app_id: int) -> bool:
         print(
             f"[open_app_on_tv] Error: status code: {result.status_code}\n{result.content}")
         return False
+
+
+def set_volume(volume: int) -> bool:
+    SET_VOLUME_COMMAND = f"""
+    {{
+        "commands": [
+            {{
+                "component": "main",
+                "capability": "audioVolume",
+                "command": "setVolume",
+                "arguments": [
+                    {volume}
+                ]
+            }}
+        ]
+    }}
+    """
+    with requests.post(API_COMMANDS, data=SET_VOLUME_COMMAND, headers=REQUEST_HEADERS) as result:
+        if result.status_code == 200:
+            return True
+        print(
+            f"[set_volume] Error: status code: {result.status_code}\n{result.content}")
+        return False
+
+
+def volume_up_down(up: bool) -> bool:
+    VOLUME_UPDOWN_COMMAND = f"""
+    {{
+        "commands": [
+            {{
+                "component": "main",
+                "capability": "audioVolume",
+                "command": "{"volumeUp" if up else "volumeDown"}"
+            }}
+        ]
+    }}
+    """
+    with requests.post(API_COMMANDS, data=VOLUME_UPDOWN_COMMAND, headers=REQUEST_HEADERS) as result:
+        if result.status_code == 200:
+            return True
+        print(
+            f"[volume_up_down] Error: status code: {result.status_code}\n{result.content}")
+        return False
